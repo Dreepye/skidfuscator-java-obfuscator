@@ -29,8 +29,10 @@ public class ConfigPanel extends JPanel {
     private final JTextField runtimeField;
     private final JCheckBox debugBox;
     private final SkidfuscatorConfig config;
+    private final JFrame parent;
 
-    public ConfigPanel() {
+    public ConfigPanel(JFrame parent) {
+        this.parent = parent;
         setLayout(new GridBagLayout());
         
         // Create compound border with titled border and empty border for padding
@@ -143,7 +145,7 @@ public class ConfigPanel extends JPanel {
         gbc.gridx = 2;
         JPanel inputButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         inputButtonPanel.setPreferredSize(new Dimension(150, 30));
-        JButton inputBrowseButton = createBrowseButton(inputField, false);
+        JButton inputBrowseButton = createBrowseButton(inputField, false, true);
         inputButtonPanel.add(inputBrowseButton);
         inputButtonPanel.add(Box.createHorizontalGlue());  // Push label to right
         inputButtonPanel.add(inputCheck);
@@ -212,7 +214,7 @@ public class ConfigPanel extends JPanel {
         gbc.gridx = 2;
         JPanel outputButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         outputButtonPanel.setPreferredSize(new Dimension(150, 30));
-        JButton outputBrowseButton = createBrowseButton(outputField, false);
+        JButton outputBrowseButton = createBrowseButton(outputField, false, false);
         outputButtonPanel.add(outputBrowseButton);
         outputButtonPanel.add(Box.createHorizontalGlue());
         outputButtonPanel.add(outputCheck);
@@ -254,7 +256,7 @@ public class ConfigPanel extends JPanel {
         gbc.gridx = 2;
         JPanel libsButtonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         libsButtonPanel.setPreferredSize(new Dimension(150, 30));
-        JButton libsBrowseButton = createBrowseButton(libsField, true);
+        JButton libsBrowseButton = createBrowseButton(libsField, true, false);
         libsButtonPanel.add(libsBrowseButton);
         libsButtonPanel.add(Box.createHorizontalGlue());
         libsButtonPanel.add(libsCheck);
@@ -358,24 +360,45 @@ public class ConfigPanel extends JPanel {
         setupAutoSave();
     }
 
-    private JButton createBrowseButton(JTextField field, boolean isDirectory) {
+    private JButton createBrowseButton(JTextField field, boolean isDirectory, boolean fileChooser) {
         JButton button = new JButton("Browse");
         button.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser(field.getText() == null
-                    ? config.getLastDirectory()
-                    : field.getText()
-            );
             if (isDirectory) {
+                JFileChooser chooser = new JFileChooser(field.getText() == null
+                        ? config.getLastDirectory()
+                        : field.getText());
                 chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+                int result = chooser.showOpenDialog(this);
+                if (result == JFileChooser.APPROVE_OPTION) {
+                    field.setText(chooser.getSelectedFile().getAbsolutePath());
+                    config.setLastDirectory(chooser.getCurrentDirectory().getAbsolutePath());
+                }
+            } else {
+                FileDialog chooser = getFileDialog(field, fileChooser);
+
+                String selectedFile = chooser.getFile();
+                if (selectedFile != null) {
+                    File file = new File(chooser.getDirectory(), selectedFile);
+                    field.setText(file.getAbsolutePath());
+                    config.setLastDirectory(file.getParent());
+                }
             }
-            int result = chooser.showOpenDialog(this);
-            if (result == JFileChooser.APPROVE_OPTION) {
-                field.setText(chooser.getSelectedFile().getAbsolutePath());
-                config.setLastDirectory(chooser.getCurrentDirectory().getAbsolutePath());
-                saveConfiguration();
-            }
+
+            saveConfiguration();
         });
         return button;
+    }
+
+    private FileDialog getFileDialog(JTextField field, boolean fileChooser) {
+        FileDialog chooser = new FileDialog(parent, "Select File", fileChooser ? FileDialog.LOAD : FileDialog.SAVE);
+        chooser.setDirectory(field.getText() == null
+                ? config.getLastDirectory()
+                : field.getText());
+
+        // Allow files with .jar, .apk, .dex extensions
+        chooser.setFilenameFilter((dir, name) -> name.endsWith(".jar") || name.endsWith(".apk") || name.endsWith(".dex"));
+        chooser.setVisible(true);
+        return chooser;
     }
 
     private void setupAutoSave() {

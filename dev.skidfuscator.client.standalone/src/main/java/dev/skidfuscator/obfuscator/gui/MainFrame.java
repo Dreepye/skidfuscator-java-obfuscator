@@ -191,7 +191,7 @@ public class MainFrame extends JFrame {
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(10, 5, 20, 0));
 
         // Initialize panels
-        configPanel = new ConfigPanel();
+        configPanel = new ConfigPanel(this);
         transformerPanel = new TransformerPanel();
         consolePanel = new ConsolePanel();
         librariesPanel = new LibrariesPanel(configPanel, null);
